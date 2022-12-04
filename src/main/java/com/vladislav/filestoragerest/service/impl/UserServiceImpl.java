@@ -11,7 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +43,7 @@ public class UserServiceImpl implements UserService {
         User result = userRepository.findById(id).orElse(null);
         if(result == null) {
             log.warn("IN getById - no user found by id: {}", id);
+            return null;
         }
         log.info("IN getById - user found by id: {}", id);
         return result;
@@ -54,6 +57,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public User register(User user) {
         Role roleUser = roleRepository.findByName("ROLE_USER");
         List<Role> userRoles = new ArrayList<>();
@@ -70,6 +74,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public boolean delete(Long id) {
         User user = userRepository.findById(id).orElse(null);
         if (user != null) {
@@ -84,11 +89,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public User update(User user) {
         User userToUpdate = userRepository.findById(user.getId()).orElse(null);
         if (userToUpdate != null) {
             userToUpdate.setUsername(user.getUsername());
-            userToUpdate.setPassword(userToUpdate.getPassword());
+            userToUpdate.setPassword(passwordEncoder.encode(userToUpdate.getPassword()));
 
             User savedUser = userRepository.save(userToUpdate);
             log.info("IN update - user with id: {} updated", user.getId());
@@ -97,5 +103,9 @@ public class UserServiceImpl implements UserService {
             log.warn("IN update - no user found by id: {}", user.getId());
             return null;
         }
+    }
+
+    public User getMyInfo(Principal principal) {
+        return userRepository.findByUsername(principal.getName());
     }
 }

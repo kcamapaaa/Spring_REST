@@ -1,24 +1,37 @@
 package com.vladislav.filestoragerest.service.impl;
 
-import com.vladislav.filestoragerest.model.File;
-import com.vladislav.filestoragerest.model.Status;
-import com.vladislav.filestoragerest.model.User;
+import com.vladislav.filestoragerest.model.*;
+import com.vladislav.filestoragerest.repository.EventRepository;
 import com.vladislav.filestoragerest.repository.FileRepository;
+import com.vladislav.filestoragerest.service.EventService;
 import com.vladislav.filestoragerest.service.FileService;
+import com.vladislav.filestoragerest.service.StorageService;
+import com.vladislav.filestoragerest.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.FileNotFoundException;
+import java.security.Principal;
 import java.util.List;
 
 @Service
 @Slf4j
 public class FileServiceImpl implements FileService {
     FileRepository fileRepository;
+    StorageService storageService;
+    UserService userService;
+    EventService eventService;
 
     @Autowired
-    public FileServiceImpl(FileRepository fileRepository) {
+    public FileServiceImpl(@Lazy FileRepository fileRepository, StorageService storageService, UserService userService, EventService eventService) {
         this.fileRepository = fileRepository;
+        this.storageService = storageService;
+        this.userService = userService;
+        this.eventService = eventService;
     }
 
     @Override
@@ -46,22 +59,37 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public boolean delete(Long id) {
-        File file = fileRepository.findById(id).orElse(null);
-        if (file != null) {
-            file.setStatus(Status.DELETED);
-            File deletedFile = fileRepository.save(file);
-            log.info("IN deleted - file {} found by id: {}", deletedFile, id);
-            return true;
-        } else {
+    @Transactional
+    public boolean delete(Long id, Principal principal) {
+        File fileById = fileRepository.findById(id).orElse(null);
+        if(fileById == null) {
             log.warn("IN delete - no file found by id: {}", id);
             return false;
+        } else {
+            fileById.setStatus(Status.DELETED);
+            File deletedFile = fileRepository.save(fileById);
+            log.info("IN deleted - file {} found by id: {}", deletedFile, id);
+            storageService.deleteFile(fileById.getFileName());
+            User user = userService.getByUsername(principal.getName());
+            if(user == null) {
+                throw new RuntimeException("Unknown user");
+            }
+            eventService.save(new Event(Action.DELETED, user, fileById));
+            return true;
         }
     }
 
     @Override
-    public File save(File file) {
-        File savedFile = fileRepository.save(file);
+    @Transactional
+    public File save(MultipartFile file, Principal principal) {
+        User user = userService.getByUsername(principal.getName());
+        if(user == null) {
+            throw new RuntimeException("Unknown user");
+        }
+        String linkToFile = storageService.uploadFile(file);
+        File newFile = new File(linkToFile, file.getOriginalFilename());
+        File savedFile = fileRepository.save(newFile);
+        eventService.save(new Event(Action.UPLOADED, user, savedFile));
         log.info("IN save - file with id: {} was saved", savedFile.getId());
         return savedFile;
     }

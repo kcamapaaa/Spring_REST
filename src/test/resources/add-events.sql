@@ -1,0 +1,3 @@
+insert into events (id, user_id, file_id, action, creation_date, updated, status) values (1, 1, 1, 'UPLOADED', now(), now(), 'ACTIVE');
+insert into events (id, user_id, file_id, action, creation_date, updated, status) values (2, 2, 1, 'UPLOADED', now(), now(), 'ACTIVE');
+insert into events (id, user_id, file_id, action, creation_date, updated, status) values (3, 1, 1, 'DELETED', now(), now(), 'ACTIVE');

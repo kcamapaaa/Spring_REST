@@ -11,8 +11,10 @@ import com.vladislav.filestoragerest.service.StorageService;
 import com.vladislav.filestoragerest.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -21,23 +23,19 @@ import java.io.IOException;
 import java.net.URL;
 
 @Service
+@Transactional
 public class StorageServiceImpl implements StorageService {
     @Value("${application.bucket.name}")
     private String bucketName;
 
     private final AmazonS3 s3Client;
-    private final FileService fileService;
-    private final UserService userService;
-    private final EventService eventService;
 
     @Autowired
-    public StorageServiceImpl(AmazonS3 s3Client, FileService fileService, UserService userService, EventService eventService) {
+    public StorageServiceImpl(AmazonS3 s3Client) {
         this.s3Client = s3Client;
-        this.fileService = fileService;
-        this.userService = userService;
-        this.eventService = eventService;
     }
 
+    @Transactional
     public String uploadFile(MultipartFile file) {
         String fileName = file.getOriginalFilename();
         File fileObject = convertMultiPartFileToFile(file);
@@ -47,18 +45,18 @@ public class StorageServiceImpl implements StorageService {
         return linkToFile;
     }
 
-    public ByteArrayResource downloadFile(String fileName) {
-        try {
-            S3Object s3Object = s3Client.getObject(bucketName, fileName);
-            S3ObjectInputStream inputStream = s3Object.getObjectContent();
-            byte[] bytes = IOUtils.toByteArray(inputStream);
-            ByteArrayResource byteArrayResource = new ByteArrayResource(bytes);
-            return byteArrayResource;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
+//    public ByteArrayResource downloadFile(String fileName) {
+//        try {
+//            S3Object s3Object = s3Client.getObject(bucketName, fileName);
+//            S3ObjectInputStream inputStream = s3Object.getObjectContent();
+//            byte[] bytes = IOUtils.toByteArray(inputStream);
+//            ByteArrayResource byteArrayResource = new ByteArrayResource(bytes);
+//            return byteArrayResource;
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return null;
+//        }
+//    }
 
     public String deleteFile(String fileName) {
         s3Client.deleteObject(bucketName, fileName);

@@ -15,4 +15,15 @@ public class File extends BaseModel{
     private String fileName;
     @OneToMany(mappedBy = "file", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Event> event;
+
+    public File() {
+    }
+
+    public File(String fileName) {
+        this.fileName = fileName;
+    }
+    public File(String location, String fileName) {
+        this.location = location;
+        this.fileName = fileName;
+    }
 }

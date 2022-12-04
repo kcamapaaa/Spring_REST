@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -15,15 +16,13 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private JwtTokenProvider jwtTokenProvider;
+    private static final String ADMIN_ROLE = "ADMIN";
+    private static final String MODERATOR_ROLE = "MODERATOR";
+    private static final String USER_ROLE = "USER";
     @Autowired
     public SecurityConfig(@Lazy JwtTokenProvider jwtTokenProvider) {
         this.jwtTokenProvider = jwtTokenProvider;
     }
-
-    private static final String ADMIN_ENDPOINT = "/api/v1/admin/**";
-    private static final String MODERATOR_ENDPOINT = "/api/v1/moderator/**";
-    private static final String USER_ENDPOINT = "/api/v1/users/**";
-    private static final String LOGIN_ENDPOINT = "/api/v1/auth/login";
 
     @Bean
     @Override
@@ -38,11 +37,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeRequests()
-                .antMatchers(LOGIN_ENDPOINT).permitAll()
-                .antMatchers(USER_ENDPOINT).hasAnyRole("USER", "MODERATOR", "ADMIN")
-                .antMatchers(MODERATOR_ENDPOINT).hasAnyRole("MODERATOR", "ADMIN")
-                .antMatchers(ADMIN_ENDPOINT).hasRole("ADMIN")
-                .anyRequest().authenticated()
+                .antMatchers("/api/v1/auth/login").permitAll()
+                .antMatchers("/api/v1/users/myInfo").hasAnyRole(USER_ROLE, MODERATOR_ROLE, ADMIN_ROLE)
+                .antMatchers("/api/v1/files/**").hasAnyRole(MODERATOR_ROLE, ADMIN_ROLE)
+                .antMatchers(HttpMethod.GET, "/api/v1/users/**").hasAnyRole(MODERATOR_ROLE, ADMIN_ROLE)
+                .antMatchers("/api/v1/users/**").hasRole(ADMIN_ROLE)
+                .antMatchers("/api/v1/**").hasAnyRole(MODERATOR_ROLE, ADMIN_ROLE)
+                .anyRequest()
+                .authenticated()
                 .and()
                 .apply(new JwtConfigurer(jwtTokenProvider));
 

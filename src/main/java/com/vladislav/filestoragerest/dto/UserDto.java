@@ -14,7 +14,6 @@ public class UserDto {
         User user = new User();
         user.setId(this.id);
         user.setUsername(this.username);
-
         return user;
     }
 
@@ -22,7 +21,6 @@ public class UserDto {
         UserDto userDto = new UserDto();
         userDto.setId(user.getId());
         userDto.setUsername(user.getUsername());
-
         return userDto;
     }
 }
